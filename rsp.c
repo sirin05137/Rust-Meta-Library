@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <sys/mman.h>
 #include <pthread.h>
-#include "/usr/local/include/mimalloc-2.0/mimalloc.h"
 #include <dlfcn.h>
 
 #define PTHREAD_HOOKING_ERROR \
