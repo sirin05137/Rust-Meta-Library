@@ -40,7 +40,6 @@ int pthread_create(pthread_t *restrict thread,
   	if(!real_pthread_create){
    		PTHREAD_HOOKING_ERROR
   	}
-	//printf("test");
 	return real_pthread_create(thread, attr, thread_function_hooking, temp);
 }
 
@@ -48,11 +47,8 @@ void* thread_function_hooking(void* args){
 	void* extern_sp = __get_extern_stack_ptr();
 	//void* extern_sp = __allocate_extern_stack(DEFAULT_STACK_SIZE);
 	Argument_t *argument = (Argument_t*) args;
-	//void* (*origin_function)(void*) = argument.function;
-	//void* origin_args = argument.args;
 	//asm("mov %0, %%r15;"::"r" (extern_sp):"%r15");
-	
-	//void *retval = origin_function(origin_args);
+
 	void *retval = argument->function(argument->args);
 
 	uint64_t used_stack_size = (uint64_t)((char*)extern_sp - (char*)smallest_addr_used);
@@ -82,10 +78,10 @@ void *__allocate_extern_stack(size_t size){
 
 void *__get_extern_stack_ptr(){
 	if(!extern_stack_ptr){
-		//assert
+		//assert?
 		__allocate_extern_stack(DEFAULT_STACK_SIZE);
 	}
-	printf("extern stack pointer : %p\n\n", extern_stack_ptr);
+	//printf("extern stack pointer : %p\n\n", extern_stack_ptr);
 	return extern_stack_ptr;
 }
 
