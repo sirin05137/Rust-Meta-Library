@@ -24,7 +24,7 @@ void *__get_extern_stack_ptr();
 void* thread_function_hooking(void*);
 
 typedef struct Argument{
-	void* function;
+	void* (*function)(void*);
 	void* args;
 }Argument_t;
 
@@ -33,26 +33,27 @@ int pthread_create(pthread_t *restrict thread,
 				   void *(*routine)(void*), 
 				   void *restrict arg){
 	
-	Argument_t temp;
-	temp.function = (void*) routine;
-	temp.args = arg;
+	Argument_t *temp = malloc(sizeof(Argument_t));
+	temp->function = routine;
+	temp->args = arg;
 	real_pthread_create = dlsym(RTLD_NEXT, "pthread_create");
   	if(!real_pthread_create){
    		PTHREAD_HOOKING_ERROR
   	}
 	//printf("test");
-	return real_pthread_create(thread, attr, thread_function_hooking, &temp);
+	return real_pthread_create(thread, attr, thread_function_hooking, temp);
 }
 
 void* thread_function_hooking(void* args){
 	void* extern_sp = __get_extern_stack_ptr();
 	//void* extern_sp = __allocate_extern_stack(DEFAULT_STACK_SIZE);
-	Argument_t argument = *(Argument_t*) args;
-	void* (*origin_function)(void*) = argument.function;
-	void* origin_args = argument.args;
+	Argument_t *argument = (Argument_t*) args;
+	//void* (*origin_function)(void*) = argument.function;
+	//void* origin_args = argument.args;
 	//asm("mov %0, %%r15;"::"r" (extern_sp):"%r15");
 	
-	void *retval = origin_function(origin_args);
+	//void *retval = origin_function(origin_args);
+	void *retval = argument->function(argument->args);
 
 	uint64_t used_stack_size = (uint64_t)((char*)extern_sp - (char*)smallest_addr_used);
 	int num_page = used_stack_size/4096;
@@ -66,6 +67,7 @@ void* thread_function_hooking(void* args){
 		//printf("%d\n", num_page);
 		printf("Unable to release the extern stack\n");
 	}
+	free(argument);
 	return retval;
 }
 
