@@ -6,6 +6,13 @@
 #include <sys/mman.h>
 #include <pthread.h>
 #include <dlfcn.h>
+//#include <sys/auxv.h>
+//#include <elf.h>
+//#include <asm/hwcap2.h>
+//#include <immintrin.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <asm/prctl.h>
 
 #define PTHREAD_HOOKING_ERROR \
   fprintf(stderr, "Unable to create pthread library hooks\n"); \
@@ -48,7 +55,8 @@ void* thread_function_hooking(void* args){
 	//void* extern_sp = __allocate_extern_stack(DEFAULT_STACK_SIZE);
 	Argument_t *argument = (Argument_t*) args;
 	//asm("mov %0, %%r15;"::"r" (extern_sp):"%r15");
-
+    arch_prctl(ARCH_SET_GS, (uintptr_t)extern_sp);
+	
 	void *retval = argument->function(argument->args);
 
 	uint64_t used_stack_size = (uint64_t)((char*)extern_sp - (char*)smallest_addr_used);
@@ -81,7 +89,7 @@ void *__get_extern_stack_ptr(){
 		//assert?
 		__allocate_extern_stack(DEFAULT_STACK_SIZE);
 	}
-	//printf("extern stack pointer : %p\n\n", extern_stack_ptr);
+	printf("extern stack pointer : %p\n\n", extern_stack_ptr);
 	return extern_stack_ptr;
 }
 
@@ -98,3 +106,32 @@ void* register_2_memory(void* static_top){
 	//asm("mov %%r15, %0;":"=r"(extern_stack_ptr)::);
 }
 
+void MEM2GS(void* test){
+
+	
+	//unsigned val = getauxval(AT_HWCAP2);
+	//if (val & HWCAP2_FSGSBASE){
+	//	printf("MEM2GS\n");
+	if ((uint64_t)test < (uint64_t)smallest_addr_used){
+		smallest_addr_used = test;
+	}
+	uintptr_t ptrToInt = (uintptr_t)test;
+	//asm("wrgsbase %0"::"r"(ptrToInt));
+	arch_prctl(ARCH_SET_GS, ptrToInt);
+	//_writegsbase_u64(ptrToInt);
+	//}
+	//asm("movq %0,%%gs:%c[offset]" : : "r" (test), [offset] "i" (0));
+}
+
+void* GS2MEM(){
+	//unsigned val = getauxval(AT_HWCAP2);
+	void *temp;
+	uintptr_t a;//=_readgsbase_u64();
+	arch_prctl(ARCH_GET_GS, &a);
+	//if (val & HWCAP2_FSGSBASE){
+	//	printf("GS2MEM\n");
+	//asm("rdgsbase %0":"=r"(a));//}
+	temp = (void*)a;
+	//asm("movq %%gs:%c[offset], %0" : "=r" (temp) :[offset] "i" (0));
+	return temp;
+}
